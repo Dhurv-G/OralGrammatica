@@ -1,175 +1,272 @@
-# 🎤 Friendly Grammar Checker
+# OralGrammatica — AI-Powered Voice Grammar Analysis
 
-A humanized, AI-powered grammar checker that analyzes your spoken English with gentle, encouraging feedback. Perfect for language learners, public speakers, and anyone looking to improve their English communication skills!
+Transform spoken English with gentle, intelligent grammar guidance. Built on local Whisper ASR and classic NLP to provide encouraging, personalized feedback for language learners, presenters, and public speakers.
 
-## ✨ Features
+> ✨ Real-time-ready transcription • Comprehensive analysis • Humanized feedback • Personalized scoring
 
-- **🎵 Speech-to-Text Analysis**: Transcribes your audio files and analyzes the grammar
-- **🤖 AI-Powered Grammar Checking**: Uses advanced language models for comprehensive analysis
-- **💬 Friendly Feedback**: Encouraging, supportive language instead of harsh corrections
-- **📊 Detailed Scoring**: Personalized grade with specific areas for improvement
-- **🎯 Multiple Analysis Types**:
-  - Subject-verb agreement
-  - Tense consistency
-  - Sentence structure
-  - Article usage
-  - Redundancy detection
-  - Speech patterns and rhythm
+---
 
-## 🚀 Quick Start
+## Table of Contents
+- [Features](#features)
+- [Architecture](#architecture)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Sample Output](#sample-output)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
 
-### Prerequisites
+---
 
-- Python 3.8 or higher
-- An audio file in WAV format (e.g., `incorrectgrammar.wav`)
+## Features
 
-### Installation
+- **Speech-to-Text (ASR):** Transcribes WAV audio using OpenAI’s Whisper (local inference).
+- **AI-assisted Grammar Analysis:** Checks tense consistency, subject–verb agreement, sentence structure, article use, redundancy, and rhythm.
+- **Humanized Feedback:** Supportive, non-judgmental phrasing and gentle suggestions.
+- **Personalized Scoring:** Weighted rubric rolled up into a grade/score with strengths and next steps.
+- **Drop-in WAV Support:** Works with your own audio files out of the box.
 
-1. **Clone or download this repository**
-   ```bash
-   git clone https://github.com/Dhurv-G/OralGrammatica.git
-   cd GrammarChecker
-   ```
+---
 
-2. **Install required packages**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Place your audio file**
-   - Put your WAV audio file in the same directory as `app.py`
-   - Name it `incorrectgrammar.wav` or update the filename in the code
-
-4. **Run the grammar checker**
-   ```bash
-   python app.py
-   ```
-
-## 📋 Requirements
-
-The main dependencies include:
-
-- **whisper**: OpenAI's speech recognition model
-- **transformers**: Hugging Face's language models
-- **torch**: PyTorch for deep learning
-- **nltk**: Natural Language Toolkit
-- **gramformer**: Advanced grammar correction
-- **re**: Regular expressions for text processing
-
-See `requirements.txt` for the complete list with specific versions.
-
-## 🎯 How It Works
-
-1. **Audio Processing**: The app transcribes your WAV file using OpenAI's Whisper model
-2. **Grammar Analysis**: Multiple AI models analyze your text for various grammar issues
-3. **Friendly Feedback**: Issues are categorized and presented with encouraging suggestions
-4. **Scoring**: You receive a personalized grade (A-F) with specific improvement areas
-5. **Detailed Report**: Comprehensive analysis with strengths and areas for growth
-
-## 📊 Sample Output
+## Architecture
 
 ```
-🎤 Welcome to Your Friendly Grammar Checker!
+Audio (.wav)
+│
+├─► Whisper ASR (local) → transcription
+│
+├─► NLP / Heuristics / Grammar models
+│      • tense consistency
+│      • S/V agreement
+│      • structure & articles
+│      • redundancy & rhythm
+│
+└─► Friendly report + weighted scoring
+```
+
+**Notes**
+- Whisper runs locally via the `whisper` python package.
+- Classic NLP utilities (e.g., `nltk`, regex) and a grammar-correction model (`gramformer`) complement rule-based checks.
+
+---
+
+## Repository Structure
+
+```
+.
+├── app.py                   # Entry point (CLI)
+├── requirements.txt         # Python dependencies
+├── README.md                # You are here
+├── correct_grammar.wav      # Sample audio (good grammar)
+├── incorrect_grammar.wav    # Sample audio (issues to detect)
+└── research_adapter/        # (WIP) notes / experiments
+
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- **Python**: 3.8+ recommended
+- **OS**: Linux/Mac/Windows
+- **Audio**: WAV files (mono/stereo; common sample rates work)
+- **Optional**: GPU with CUDA for faster Whisper inference
+
+### 1) Clone
+
+```bash
+git clone https://github.com/Dhurv-G/OralGrammatica.git
+cd OralGrammatica
+````
+
+### 2) Create a virtual environment (recommended)
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Unix/Mac:
+source .venv/bin/activate
+```
+
+### 3) Install dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+---
+
+## Usage
+
+### Quick run with the included sample
+
+```bash
+python app.py
+```
+
+By default, `app.py` is set up to read a WAV file from the project directory (e.g., `incorrect_grammar.wav`).
+To analyze your own file, either **replace the filename** in the code (see [Configuration](#configuration)) or rename your file to match the expected default.
+
+### Analyze a specific file (simple edit)
+
+Open `app.py` and set:
+
+```python
+audio_file = "your_audio_file.wav"  # point this to your file
+```
+
+Then run:
+
+```bash
+python app.py
+```
+
+---
+
+## Sample Output
+
+```
+Welcome to Your Friendly Grammar Checker!
 ============================================================
 I'm here to help you improve your English with gentle, helpful feedback.
-Let's analyze your speech together! 🚀
 
-🎵 Listening to your audio file: incorrectgrammar.wav
-🔄 Transcribing your speech (this may take a moment)...
+Listening to your audio file: incorrect_grammar.wav
+Transcribing your speech...
 ✅ Transcription complete!
 
-📝 Here's what I heard you say:
-   "I am going to the store yesterday"
-
-🔍 Analyzing your grammar and style...
-📊 Analyzing 1 sentence(s)...
+Here's what I heard you say:
+  "I am going to the store yesterday"
+Analyzing your grammar and style...
+Analyzing 1 sentence(s)...
 
 ============================================================
-📋 Your Personalized Grammar Report
+Your Personalized Grammar Report
 ============================================================
 
 ⚠️ Major Areas to Consider:
--------------------------
-
+---------------------------
 1. Tense Consistency
    Context: "...I am going to the store yesterday..."
-   💬 🤔 I noticed you're mixing present and past tenses here. Usually, it's clearer to stick with one tense unless you're describing different time periods. What do you think?
+   I noticed you're mixing present and past tenses here. Usually, it's clearer to
+   stick with one tense unless you're describing different time periods.
 
 ============================================================
-📊 Your Grammar Assessment Summary
+Your Grammar Assessment Summary
 ============================================================
-📝 Words analyzed: 7
-🔍 Total suggestions: 1
-📈 Your score: 85.2/100
-🏆 Grade: A
+Words analyzed: 7
+Total suggestions: 1
+Your score: 85.2/100
+Grade: A
 
-🌟 Excellent work! Your grammar is really strong!
+Excellent work! Your grammar is really strong!
 
-🌟 What you're doing well:
-   • 🌟 Your grammar skills are impressive!
+What you're doing well:
+  • Your grammar skills are impressive!
 
-🎯 Areas to focus on:
-   • ⏰ Pay attention to verb tenses - consistency helps your audience follow along
-
+Areas to focus on:
+  • ⏰ Pay attention to verb tenses - consistency helps your audience follow along
 ============================================================
-💡 Remember: Every great writer started somewhere!
-Keep practicing, and you'll keep improving. You've got this! 💪
+Remember: Every great writer started somewhere!
+Keep practicing, and you'll keep improving. You've got this!
 ============================================================
 ```
 
-## 🔧 Customization
+---
 
-### Changing the Audio File
+## Configuration
 
-Edit line 368 in `app.py`:
-```python
-audio_file = "your_audio_file.wav"  # Change this to your file name
-```
+Open `app.py` and look for the top-level settings/constants:
 
-### Adjusting Analysis Sensitivity
+* **Audio file path**
 
-Modify the scoring weights in the `GrammarScorer` class:
-```python
-self.issue_weights = {
-    'Critical': 8,    # Most important issues
-    'Major': 6,       # Important issues  
-    'Minor': 2,       # Minor improvements
-    'Suggestion': 1   # Helpful tips
-}
-```
+  ```python
+  audio_file = "your_audio_file.wav"
+  ```
 
-## 🐛 Troubleshooting
+* **Whisper model size**
+  Whisper models trade accuracy for speed (`tiny`, `base`, `small`, `medium`, `large`).
+  If inference is slow on your machine, consider a smaller English-only model such as `small.en` instead of `base.en`.
 
-### Common Issues
+* **Scoring weights**
+  Adjust the relative importance of issue categories:
 
-1. **"Couldn't find the audio file"**
-   - Make sure your WAV file is in the same directory as `app.py`
-   - Check the filename matches exactly (case-sensitive)
+  ```python
+  self.issue_weights = {
+      "Critical": 8,  # Most important issues
+      "Major": 6,     # Important issues
+      "Minor": 2,     # Minor improvements
+      "Suggestion": 1 # Helpful tips
+  }
+  ```
 
-2. **"Some advanced grammar checking features aren't available"**
-   - This is normal if Gramformer models aren't fully loaded
-   - The basic grammar checking will still work
+> Tip: The first run may download model assets; subsequent runs are faster.
+
+---
+
+## Troubleshooting
+
+1. **“Couldn’t find the audio file”**
+
+   * Ensure the WAV sits in the project root next to `app.py`.
+   * Confirm the filename (case-sensitive) matches `audio_file`.
+
+2. **“Some advanced grammar features aren’t available”**
+
+   * This can happen if large language resources aren’t fully loaded.
+   * Core checks still run; try again or verify model installs.
 
 3. **Slow performance**
-   - First run downloads AI models (this is normal)
-   - Subsequent runs will be faster
-   - Consider using "small.en" instead of "base.en" for faster processing
 
-### System Requirements
+   * Use a smaller Whisper model (e.g., `small.en`).
+   * Prefer a GPU-enabled environment if available.
 
-- **RAM**: At least 4GB recommended
-- **Storage**: ~2GB for AI models (downloaded automatically)
-- **Audio**: WAV format, any sample rate
+4. **Dependency conflicts**
 
-## 🤝 Contributing
+   * Upgrade `pip` and reinstall:
 
-Feel free to contribute improvements:
+     ```bash
+     pip install --upgrade pip
+     pip install -r requirements.txt --upgrade --force-reinstall
+     ```
 
-1. Fork the repository
+---
+
+## Roadmap
+
+* [ ] **Mic / Real-time mode** (VAD + streaming ASR)
+* [ ] **Simple web UI** (Streamlit/Gradio)
+* [ ] **Docker image** for reproducible runs
+* [ ] **Config file** (YAML/ENV) for model/weights/filepaths
+* [ ] **Unit tests** and CI checks
+* [ ] **Evaluation harness** on public ESL datasets
+* [ ] **Export** reports to JSON/Markdown
+
+---
+
+## Contributing
+
+Contributions are welcome!
+
+1. Fork the repo
 2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+3. Make your changes + add tests (where applicable)
+4. Open a PR describing the change and rationale
+
+---
+
+## Acknowledgments
+
+* **Whisper** (OpenAI) — local ASR via the `whisper` python package
+* **Hugging Face Transformers** — model utilities
+* **PyTorch**, **NLTK**, **Gramformer** — grammar/NLP components
+
+---
 
 ## 📝 License
 
