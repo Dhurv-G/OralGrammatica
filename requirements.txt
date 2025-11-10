@@ -49,3 +49,15 @@ colorama==0.4.6
 # pytest>=7.0.0
 # black>=22.0.0
 # flake8>=5.0.0 
+language-tool-python
+rapidfuzz
+lightgbm
+pyarrow
+soundfile
+librosa
+torchaudio
+scikit-learn
+pydantic
+evaluate
+flask
+pandas

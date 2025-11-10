@@ -10,6 +10,9 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from gramformer import Gramformer
 import time
 import sys
+from flask import Flask, render_template_string, request, jsonify
+from research_adapter import score_grammar_from_transcript
+import os
 
 # Download required NLTK data with user-friendly messages
 print("🔧 Setting up your grammar checker...")
@@ -522,5 +525,317 @@ def main():
         print(f"❌ Something unexpected happened: {str(e)}")
         print("💡 Don't worry - this sometimes happens. Try running the program again!")
 
+# Flask web application
+app = Flask(__name__)
+
+# HTML template for the main page
+MAIN_PAGE_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar Checker - Your Friendly Writing Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #6c757d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .upload-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Grammar Checker</h1>
+        <p class="subtitle">Your Friendly Writing Assistant</p>
+        
+        <div class="upload-section">
+            <form id="grammarForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="audioFile">📁 Upload Audio File (WAV format):</label>
+                    <input type="file" id="audioFile" name="audioFile" accept=".wav,.mp3,.m4a" />
+                </div>
+                
+                <div style="text-align: center; margin: 20px 0; color: #6c757d;">
+                    <strong>OR</strong>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transcript">📝 Enter Transcript Text:</label>
+                    <textarea id="transcript" name="transcript" placeholder="Paste or type your transcript here..."></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" id="submitBtn">🔍 Analyze Grammar</button>
+                </div>
+            </form>
+            
+            <div id="loading" class="loading" style="display: none;">
+                <p>🔄 Processing your request... This may take a moment.</p>
+            </div>
+            
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="info" class="info" style="display: none;"></div>
+        </div>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+    
+    <script>
+        document.getElementById('grammarForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const info = document.getElementById('info');
+            const result = document.getElementById('result');
+            
+            // Reset UI
+            error.style.display = 'none';
+            info.style.display = 'none';
+            result.style.display = 'none';
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+            
+            const formData = new FormData();
+            const audioFile = document.getElementById('audioFile').files[0];
+            const transcript = document.getElementById('transcript').value;
+            
+            if (audioFile) {
+                formData.append('audioFile', audioFile);
+            } else if (transcript.trim()) {
+                formData.append('transcript', transcript);
+            } else {
+                error.textContent = 'Please either upload an audio file or enter a transcript.';
+                error.style.display = 'block';
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.statusText);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (data.html) {
+                    // Extract body content from the HTML report
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.html, 'text/html');
+                    const bodyContent = doc.body.innerHTML;
+                    
+                    result.innerHTML = bodyContent;
+                    result.style.display = 'block';
+                    result.scrollIntoView({ behavior: 'smooth' });
+                }
+                
+            } catch (err) {
+                error.textContent = 'Error: ' + err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+'''
+
+@app.route('/')
+def index():
+    """Main page with upload form"""
+    return render_template_string(MAIN_PAGE_TEMPLATE)
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    """Analyze grammar from audio file or transcript"""
+    try:
+        transcript = None
+        
+        # Check if audio file was uploaded
+        if 'audioFile' in request.files:
+            audio_file = request.files['audioFile']
+            if audio_file.filename:
+                # Save uploaded file temporarily
+                temp_path = f"temp_{audio_file.filename}"
+                audio_file.save(temp_path)
+                
+                try:
+                    # Transcribe audio
+                    print(f"🔄 Transcribing audio file: {audio_file.filename}")
+                    result = model.transcribe(temp_path)
+                    transcript = result["text"]
+                    print(f"✅ Transcription complete: {transcript}")
+                finally:
+                    # Clean up temporary file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+        
+        # Check if transcript was provided directly
+        if not transcript and 'transcript' in request.form:
+            transcript = request.form['transcript']
+        
+        if not transcript or not transcript.strip():
+            return jsonify({'error': 'No transcript available. Please provide an audio file or transcript text.'}), 400
+        
+        # Get HTML report from research adapter
+        print(f"🔍 Analyzing grammar for transcript: {transcript[:50]}...")
+        html_report = score_grammar_from_transcript(transcript.strip())
+        print("✅ Analysis complete")
+        
+        return jsonify({'html': html_report, 'transcript': transcript})
+    
+    except Exception as e:
+        print(f"❌ Error in analyze route: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == "__main__":
-    main()
+    import sys
+    # Check if running as web app or CLI
+    if len(sys.argv) > 1 and sys.argv[1] == '--web':
+        print("🌐 Starting web server...")
+        print("📱 Open http://localhost:5000 in your browser")
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    else:
+        # Run CLI version
+        main()
